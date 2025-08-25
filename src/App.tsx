@@ -1,39 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from './supabaseClient';
 import { Search, Users, MapPin, Heart } from 'lucide-react';
 
 interface Guest {
   id: number;
-  name: string;
-  table: string;
+  guest_name: string;
+  table_number: number;
 }
-
-// Mock data - in production this would come from your API
-const mockGuests: Guest[] = [
-  { id: 1, name: "John Smith", table: "Table 1" },
-  { id: 2, name: "Mary Johnson", table: "Table 2" },
-  { id: 3, name: "Robert Brown", table: "Table 1" },
-  { id: 4, name: "Sarah Davis", table: "Table 3" },
-  { id: 5, name: "Michael Wilson", table: "Table 2" },
-  { id: 6, name: "Jennifer Miller", table: "Table 4" },
-  { id: 7, name: "David Anderson", table: "Table 3" },
-  { id: 8, name: "Lisa Taylor", table: "Table 5" },
-  { id: 9, name: "James Thompson", table: "Table 1" },
-  { id: 10, name: "Patricia White", table: "Table 4" },
-  { id: 11, name: "Christopher Lee", table: "Table 6" },
-  { id: 12, name: "Barbara Martinez", table: "Table 5" },
-  { id: 13, name: "Daniel Garcia", table: "Table 2" },
-  { id: 14, name: "Susan Rodriguez", table: "Table 7" },
-  { id: 15, name: "Matthew Lopez", table: "Table 6" }
-];
 
 export default function WeddingSeatingApp() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Guest[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Real-time search as user types
   useEffect(() => {
-    if (searchTerm.trim() === '') {
+    if (!searchTerm.trim()) {
       setSearchResults([]);
       setIsSearching(false);
       return;
@@ -41,35 +22,28 @@ export default function WeddingSeatingApp() {
 
     setIsSearching(true);
 
-    // Simulate API delay for realistic feel
-    const searchTimer = setTimeout(() => {
-      const filtered = mockGuests.filter(guest =>
-          guest.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setSearchResults(filtered);
-      setIsSearching(false);
-    }, 200);
+    const searchGuests = async () => {
+      const { data, error } = await supabase
+          .from('guests') // your table name
+          .select('*')
+          .ilike('guest_name', `%${searchTerm}%`); // case-insensitive search
 
-    return () => clearTimeout(searchTimer);
+      if (error) {
+        console.error(error);
+        setSearchResults([]);
+      } else {
+        setSearchResults(data || []);
+      }
+
+      setIsSearching(false);
+    };
+
+    const timer = setTimeout(searchGuests, 200); // debounce
+    return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const handleSearch = () => {
-    if (searchTerm.trim() === '') return;
-
-    setIsSearching(true);
-    setTimeout(() => {
-      const filtered = mockGuests.filter(guest =>
-          guest.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setSearchResults(filtered);
-      setIsSearching(false);
-    }, 200);
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
+    if (e.key === 'Enter') e.preventDefault();
   };
 
   return (
@@ -103,7 +77,6 @@ export default function WeddingSeatingApp() {
                 />
               </div>
               <button
-                  onClick={handleSearch}
                   disabled={isSearching}
                   className="px-8 py-4 bg-rose-500 text-white rounded-xl hover:bg-rose-600 focus:ring-4 focus:ring-rose-200 transition-all duration-200 font-medium text-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center space-x-2"
               >
@@ -164,14 +137,14 @@ export default function WeddingSeatingApp() {
                                 </div>
                                 <div>
                                   <h3 className="text-xl font-semibold text-gray-900">
-                                    {guest.name}
+                                    {guest.guest_name}
                                   </h3>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2 bg-rose-50 px-4 py-2 rounded-lg">
                                 <MapPin className="text-rose-600" size={20} />
                                 <span className="text-rose-800 font-semibold text-lg">
-                                  {guest.table}
+                                  {guest.table_number}
                                 </span>
                               </div>
                             </div>
